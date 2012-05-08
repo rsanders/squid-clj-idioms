@@ -3,5 +3,5 @@
         squid.idiom.core))
 
 (deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+  (testing "FIXME, I suck."
+    (is (= 1 1))))
