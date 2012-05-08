@@ -1,8 +1,8 @@
-# squid-idiom
+squid-clj-idioms
+================
 
-I'm an app. Or maybe I'm a library? I haven't decided yet. 
+various little macros and whatnot I'm using in Clojure
 
-The choice is up to you!
 
 ## Usage
 
@@ -10,6 +10,6 @@ FIXME
 
 ## License
 
-Copyright Â© 2012 FIXME
+Copyright © 2012 Robert Sanders
 
 Distributed under the Eclipse Public License, the same as Clojure.
