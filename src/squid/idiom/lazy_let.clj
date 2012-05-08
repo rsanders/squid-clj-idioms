@@ -1,4 +1,4 @@
-(ns squid.idiom.pipeline
+(ns squid.idiom.lazy-let
   (:require [clojure.tools.macro :as m]))
 
 (defn ^:private llsym
