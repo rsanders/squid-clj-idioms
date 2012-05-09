@@ -161,3 +161,43 @@
                           ;; takes [12 18] and returns [18 12]
                           reverse)))))
 
+;;;
+;;; functional equivalent
+;;;
+
+(deftest test-simple-pipeline-fn
+  (testing "0 clause pipeline function constants"
+    (is (= [1 2 3 4 5]
+           ((cond-pipeline-fn [])
+            [1 2 3 4 5]))))
+
+  (testing "1 clause pipeline-fn"
+    (is (= [1 2 3]
+           ((cond-pipeline-fn [[(complement empty?) (partial take 3)]])
+            [1 2 3 4 5]))))
+
+  (testing "1 clause pipeline-fn w/expr predicate"
+    (is (= [1 2 3]
+           ((cond-pipeline-fn [[true (partial take 3)]])
+            [1 2 3 4 5]))))
+
+  (testing "1 clause pipeline-fn w/expr predicate (false"
+    (is (= [1 2 3 4 5]
+           ((cond-pipeline-fn [[false (partial take 3)]])
+            [1 2 3 4 5]))))
+
+  (testing "1 clause pipeline-fn w/expr result-fn"
+    (is (= :empty
+           ((cond-pipeline-fn [[empty? :empty]])
+            []))))
+  )
+
+(deftest test-fuller-pipeline-fn
+  (testing "4 clause pipeline function with a couple of constants"
+    (is (= [4 3 2 1]
+           ((cond-pipeline-fn [[seq reverse]
+                               [#(odd? (count %)) rest]
+                               [false :a]
+                               [true identity]])
+            [1 2 3 4 5]))))
+  )

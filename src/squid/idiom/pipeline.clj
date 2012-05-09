@@ -108,8 +108,39 @@ as the value of the cond-pipeline form."
                                    (if ~itsym
                                      (squid.idiom.pipeline/pipeline-apply ~c ~itsym)
                                      ~eexpr)) more)
-                  )))
-        gres (gensym "res__")]
+                  )))]
     `(let [~gexpr ~expr]
        ~(emit gexpr clauses))))
+
+
+(defn cond-pipeline-fn
+  "A non-macro form of the cond-pipeline macro which, instead of evaluating
+inline, composes a pipelined function from the [predicate result] clauses which
+are evaluated in natural order.
+
+If predicate is a function, then it is applied to the input of the clause, and
+the result determines whether the clause yields the result of applying the result-fn
+to the clauses's input or passes through the input unchanged (resp. true and false).
+
+If predicate is an expression, then the value of that expression is used to
+determine the disposition of the clause's input.  This is of limited value
+except when the predicate is a simple true / false value which can be used
+to insert transformations into the pipeline which are switched not by the
+input data but always on or sensitive to some other available value (e.g. a
+configuration setting).
+
+As with cond-pipeline, the result-fn (RHS) may be either a function or
+an expression which yields a non-functional value.  If the latter, the
+value is used as the result of the clause.  This is most useful in having
+the input conditionally replaced with some other data that need not be expressed
+as a transformation of the input to the clause.  e.g., if the input is nil,
+then use a default value.
+ "
+  [pred-fn-pairs]
+  (apply comp
+         (map (fn [[pred resfn]]
+                (fn [input] (if (pipeline-apply pred input)
+                             (pipeline-apply resfn input)
+                             input))) (reverse pred-fn-pairs))))
+
 
