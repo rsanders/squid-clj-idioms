@@ -5,6 +5,21 @@
 ;; the "parsing" is cribbed heavily from condp
 ;;
 
+(defn- max-arg-count [f]
+  (apply max (map #(alength (.getParameterTypes %)) (.getDeclaredMethods (class f)))))
+
+(defn pipeline-apply
+  [f & args]
+  (let [arity (max-arg-count f)
+        count (count args)]
+    (cond
+     (>= arity count) (apply f args)
+     (= arity 0)     (f)
+     (= arity 1)     (f args)
+     :else           (throw (IllegalArgumentException. "I have no idea what to do with that")))
+    )
+  )
+
 (defmacro cond-pipeline
   "Takes an expression, and a set of clauses.
 Each clause can take the form of either:
@@ -40,16 +55,17 @@ as the value of the cond-pipeline form."
                (let [[[a b c :as clause] more]
                      (split-at (if (= :>> (second args)) 3 2) args)
                      n (count clause)
-                     itsym 'it
-                     eexpr (gensym "eexpr__")]
+                     ;; anaphora
+                     itsym 'it          ; 'it' is the result of the predicate
+                     eexpr 'input]      ; 'input' is the input to the clause
                  (cond
                   (= 0 n) expr
                   (= 1 n) `(~a ~expr)
-                  (= 2 n) (emit `(let [~eexpr ~expr ~itsym (~a ~eexpr)]
-                                   (if ~itsym (~b ~eexpr) ~eexpr)) more)
+                  (= 2 n) (emit `(let [~eexpr ~expr ~itsym (squid.idiom.pipeline/pipeline-apply ~a ~eexpr)]
+                                   (if ~itsym (squid.idiom.pipeline/pipeline-apply ~b ~eexpr) ~eexpr)) more)
                   :else   (emit `(let [~eexpr ~expr ~itsym (~a ~eexpr)]
                                    (if ~itsym
-                                     (~c ~itsym)
+                                     (squid.idiom.pipeline/pipeline-apply ~c ~itsym)
                                      ~eexpr)) more)
                   )))
         gres (gensym "res__")]
