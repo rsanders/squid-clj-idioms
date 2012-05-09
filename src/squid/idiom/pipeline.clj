@@ -4,20 +4,33 @@
 ;;
 ;; the "parsing" is cribbed heavily from condp
 ;;
+(defn- arities [f]
+  "Returns a set of the arities supported by a function.
+Note that functions accepting only a rest argument will
+return #{0 1}.
 
-(defn- max-arg-count [f]
-  (apply max (map #(alength (.getParameterTypes %)) (.getDeclaredMethods (class f)))))
+For functions accepting a fixed # of args + a rest arg;
+the rest arg will be counted as 1 arg.  e.g. [arg & rest]
+will look like a function of arity 2."
+  (into #{}
+        (map #(alength (.getParameterTypes %))
+             (.getDeclaredMethods (class f)))))
+
+
+(defn- max-arity [f]
+  (apply max (arities f)))
 
 (defn pipeline-apply
   [f & args]
   (if (not (fn? f))
     f
-    (let [arity (max-arg-count f)
-          count (count args)]
+    (let [arities   (arities f)
+          max-arity (apply max arities)
+          count     (count args)]
       (cond
-       (>= arity count) (apply f args)
-       (= arity 0)     (f)
-       (= arity 1)     (f args)
+       (arities count) (apply f args)   ;if there's an exact match
+       (= max-arity 0) (f)              ;accepts no args; call without args
+       (arities 1)     (f args)         ;accepts 1 arg; pass it the arglist
        :else           (throw (IllegalArgumentException. "I have no idea what to do with that"))))))
 
 (defmacro cond-pipeline
