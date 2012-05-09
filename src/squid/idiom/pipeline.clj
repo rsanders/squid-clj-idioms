@@ -1,29 +1,51 @@
 (ns squid.idiom.pipeline
   (:require [clojure.tools.macro :as m]))
 
-(comment
-  (defn is-fooable? [list]
-    (odd? (count list)))
+(defmacro cond-pipeline
+  "Takes an expression, and a set of clauses.
+Each clause can take the form of either:
 
-  (defn do-foo [list]
-    (map incr list))
+test-fn processing-fn
 
-  (def is-barable? (comp not is-fooable?))
+test-fn :>> processing-fn
 
-  ;; apply a series of conditional transformations to an input 
-  (cond-pipeline [1 2 3 4 5]
-                 ;; assuming is-fooable? returns true, maps do-foo across [1 2 3 4 5]
-                 is-fooable?  do-foo
+Note :>> is an ordinary keyword.
 
-                 ;; if list doesn't satisfy is-barable, do nothing
-                 is-barable?  do-bar
-                 
-                 ;; doubles every element in list [2 3 4 5 6]
-                 is-addable?  (partial * 2)
+The input to the first clause is 'expr'. Each clause after the
+first one receives the output of the previous clause as its input.
 
-                 ;; takes list [3 4 5 6] and returns [4 6]
-                 rest         #(filter even? it)
+For each clause, (test-fn input) is evaluated. If it returns
+logical true, the clause is a match. If a binary clause matches, the
+clause results in (processing-fn input).
+If a ternary clause matches, its result-fn, which must be a unary function,
+is called with the result of the predicate as its argument, the result of the clause
+being the value of the clause, i.e. (processing-fn (pred input)).
 
-                 ;; takes [4 6] and returns [6 4]
-                 :finally     reverse)
-  )
+If (test-fn expr) returns false, then the input is the result of the clause
+and becomes the input into the next clause unchanged.
+
+Again, the result of each clause is fed into the next clause as its input.  The
+output of the final clause is the value of the entire cond-pipeline form.
+
+A single final processing-fn can follow the clauses, and it will
+be applied to the result of the penultimate clause.  That value will be returned
+as the value of the cond-pipeline form."
+  [expr & clauses]
+  (let [gexpr (gensym "expr__")
+        emit (fn emit [expr args]
+               (let [[[a b c :as clause] more]
+                     (split-at (if (= :>> (second args)) 3 2) args)
+                     n (count clause)
+                     eexpr (gensym "eexpr__")]
+                 (cond
+                  (= 0 n) expr
+                  (= 1 n) `(~a ~expr)
+                  (= 2 n) (emit `(let [~eexpr ~expr] (if (~a ~eexpr) (~b ~eexpr) ~eexpr)) more)
+                  :else   (emit `(let [~eexpr ~expr] (if-let [p# (~a ~eexpr)]
+                                                       (~c p#)
+                                                       ~eexpr)) more)
+                  )))
+        gres (gensym "res__")]
+    `(let [~gexpr ~expr]
+       ~(emit gexpr clauses))))
+
