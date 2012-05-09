@@ -165,37 +165,37 @@
 ;;; functional equivalent
 ;;;
 
-(deftest test-simple-pipeline-fn
+(deftest test-simple-pipeline-from-seq
   (testing "0 clause pipeline function constants"
     (is (= [1 2 3 4 5]
-           ((cond-pipeline-fn [])
+           ((cond-pipeline-from-seq [])
             [1 2 3 4 5]))))
 
-  (testing "1 clause pipeline-fn"
+  (testing "1 clause pipeline-from-seq"
     (is (= [1 2 3]
-           ((cond-pipeline-fn [[(complement empty?) (partial take 3)]])
+           ((cond-pipeline-from-seq [[(complement empty?) (partial take 3)]])
             [1 2 3 4 5]))))
 
-  (testing "1 clause pipeline-fn w/expr predicate"
+  (testing "1 clause pipeline-from-seq w/expr predicate"
     (is (= [1 2 3]
-           ((cond-pipeline-fn [[true (partial take 3)]])
+           ((cond-pipeline-from-seq [[true (partial take 3)]])
             [1 2 3 4 5]))))
 
-  (testing "1 clause pipeline-fn w/expr predicate (false"
+  (testing "1 clause pipeline-from-seq w/expr predicate (false"
     (is (= [1 2 3 4 5]
-           ((cond-pipeline-fn [[false (partial take 3)]])
+           ((cond-pipeline-from-seq [[false (partial take 3)]])
             [1 2 3 4 5]))))
 
-  (testing "1 clause pipeline-fn w/expr result-fn"
+  (testing "1 clause pipeline-from-seq w/expr result-fn"
     (is (= :empty
-           ((cond-pipeline-fn [[empty? :empty]])
+           ((cond-pipeline-from-seq [[empty? :empty]])
             []))))
   )
 
-(deftest test-fuller-pipeline-fn
+(deftest test-fuller-pipeline-from-seq
   (testing "4 clause pipeline function with a couple of constants"
     (is (= [4 3 2 1]
-           ((cond-pipeline-fn [[seq reverse]
+           ((cond-pipeline-from-seq [[seq reverse]
                                [#(odd? (count %)) rest]
                                [false :a]
                                [true identity]])
