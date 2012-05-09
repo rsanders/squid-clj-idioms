@@ -10,43 +10,84 @@
 
 (defn pipeline-apply
   [f & args]
-  (let [arity (max-arg-count f)
-        count (count args)]
-    (cond
-     (>= arity count) (apply f args)
-     (= arity 0)     (f)
-     (= arity 1)     (f args)
-     :else           (throw (IllegalArgumentException. "I have no idea what to do with that")))
-    )
-  )
+  (if (not (fn? f))
+    f
+    (let [arity (max-arg-count f)
+          count (count args)]
+      (cond
+       (>= arity count) (apply f args)
+       (= arity 0)     (f)
+       (= arity 1)     (f args)
+       :else           (throw (IllegalArgumentException. "I have no idea what to do with that"))))))
 
 (defmacro cond-pipeline
   "Takes an expression, and a set of clauses.
-Each clause can take the form of either:
+Each clause can take one of these forms:
 
-test-fn processing-fn
+  test-fn processing-fn-or-result-expr
 
-test-fn :>> processing-fn
+  test-fn :>> processing-fn-or-result-expr
+
+In these clauses, the test-fn-or-expr is also known as the
+LHS (left hand side) and the processing-fn-or-result-expr is
+also known as the RHS (right hand side).  In general, the LHS
+determines whether to pass through the clause's input into the
+next clause unchanged or to pass the result of the RHS into the
+next clause.
+
+The following form is only available to the last clause in the body:
+
+  processing-fn-or-result-expr
 
 Note :>> is an ordinary keyword.
 
 The input to the first clause is 'expr'. Each clause after the
 first one receives the output of the previous clause as its input.
 
-For each clause, (test-fn input) is evaluated. If it returns
+For each clause, the LHS is evaluated. If it returns
 logical true, the clause is a match. If a binary clause matches, the
-clause results in (processing-fn input).
-If a ternary clause matches, its result-fn, which must be a unary function,
-is called with the result of the predicate as its argument, the result of the clause
-being the value of the clause, i.e. (processing-fn (pred input)).
+clause results in evaluation of the right-hand side.
 
-If (test-fn expr) returns false, then the input is the result of the clause
+If a ternary clause matches, its processing-fn, if a unary function,
+is called with the result of the LHS as its argument, and the result
+becomes the result of the clause, i.e. (processing-fn (pred input)).
+
+If the LHS results in a non-true value, then the input is the result of the clause
 and becomes the input into the next clause unchanged.
 
 Again, the result of each clause is fed into the next clause as its input.  The
-output of the final clause is the value of the entire cond-pipeline form.
+output of the final clause becomes the value of the entire cond-pipeline form.
 
-A single final processing-fn can follow the clauses, and it will
+LHS Evaluation:
+
+The LHS of each clause may be either a predicate-function or
+a predicate-expr.  If it is a predicate-function, then the predicate function
+is applied to the clause's input.
+
+If it is a predicate-expr, i.e. not a functional type, then the
+predicate-expr is evaluated and used as the result of the LHS.
+
+
+RHS Evaluation:
+
+The RHS of each clause may be either a processing-function or
+a result-expr.  If it is a processing-function, then the processing function
+is applied to the processing-fn-input, which in a binary clause is the input
+to the clause, and in a ternary clause is the result of (pred input).
+
+If it is a result-expr, i.e. not a functional type, then the result-expr is
+evaluated.
+
+Environment and Anaphoric Symbols:
+
+These symbols are available to each processing-fn-or-result-expr:
+
+- 'input' - this is the input to the clause, available to LHS and RHS
+- 'it'    - this is the result of (pred input) for the clause, and is only
+            available to the RHS
+Finally:
+
+A single final processing-fn-or-result-expr can follow the clauses, and it will
 be applied to the result of the penultimate clause.  That value will be returned
 as the value of the cond-pipeline form."
   [expr & clauses]
@@ -60,10 +101,10 @@ as the value of the cond-pipeline form."
                      eexpr 'input]      ; 'input' is the input to the clause
                  (cond
                   (= 0 n) expr
-                  (= 1 n) `(~a ~expr)
+                  (= 1 n) `(let [~eexpr ~expr] (squid.idiom.pipeline/pipeline-apply ~a ~eexpr))
                   (= 2 n) (emit `(let [~eexpr ~expr ~itsym (squid.idiom.pipeline/pipeline-apply ~a ~eexpr)]
                                    (if ~itsym (squid.idiom.pipeline/pipeline-apply ~b ~eexpr) ~eexpr)) more)
-                  :else   (emit `(let [~eexpr ~expr ~itsym (~a ~eexpr)]
+                  :else   (emit `(let [~eexpr ~expr ~itsym (squid.idiom.pipeline/pipeline-apply ~a ~eexpr)]
                                    (if ~itsym
                                      (squid.idiom.pipeline/pipeline-apply ~c ~itsym)
                                      ~eexpr)) more)

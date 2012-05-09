@@ -50,26 +50,91 @@
       (is (= 1 @counter)))))
   
 
-(deftest simple-cond-pipelines
-  (testing "empty pipeline"
-    (is (= [1 2 3 4 5]
-           (cond-pipeline [1 2 3 4 5]))))
-
-  (testing "one element (final processing-fn) pipeline"
-    (is (= [5 4 3 2 1]
+(deftest anaphora-for-processor-fns
+  (testing "one element (final processing-fn) pipeline taking 0 args"
+    (is (= [:a :b :c]
            (cond-pipeline [1 2 3 4 5]
-                          reverse))))
+                          #(list :a :b :c)))))
 
-  (testing "one binary clause pipeline"
-    (is (= [2 3 4 5 6]
+  (testing "one element (final processing-fn) pipeline using 'input' anaphora and taking 0 args"
+    (is (= [2 3 4 5]
            (cond-pipeline [1 2 3 4 5]
-                          is-fooable?  do-foo))))
+                          #(rest input)))))
+  
+  (testing "one binary clause pipeline w/processing-fn using 'it' and taking 0 args"
+    (is (= 6
+           (cond-pipeline [1 2 3 4 5]
+                          last  #(inc it)))))
 
-  (testing "one ternary clause pipeline"
+  (testing "one ternary clause pipeline for processing-fn taking 0 args"
     (is (= [3 4 5 6]
            (cond-pipeline [1 2 3 4 5]
-                          rest :>> do-foo))))
+                          rest :>> #(do-foo it)))))
   )
+
+(deftest anaphora-for-processor-exprs
+  (testing "one element (final result-expr) pipeline"
+    (is (= [:a :b :c]
+           (cond-pipeline [1 2 3 4 5]
+                          (list :a :b :c)))))
+
+  (testing "one element (final result-expr) pipeline using 'input' anaphora"
+    (is (= [2 3 4 5]
+           (cond-pipeline [1 2 3 4 5]
+                          (rest input)))))
+
+  (testing "one binary clause pipeline w/result-expr using 'it'"
+    (is (= 6
+           (cond-pipeline [1 2 3 4 5]
+                          last  (inc it))))
+
+    ;; should return input as conditional is false
+    ;; should NOT evaluate result-expr, which in this case would error
+    (is (= [1 2 3 4 5]
+           (cond-pipeline [1 2 3 4 5]
+                          (comp next empty) (inc it))))
+    )
+
+  (testing "one ternary clause pipeline for result-expr"
+    (is (= [3 4 5 6]
+           (cond-pipeline [1 2 3 4 5]
+                          rest :>> (do-foo it))))
+
+    ;; should return input because conditional is false (nil)
+    ;; should NOT evaluate result-expr, which in this case would error
+    (is (= [1 2 3 4 5]
+           (cond-pipeline [1 2 3 4 5]
+                          (comp next empty) :>> (do-foo it)))))
+  )
+
+
+(deftest compound-cond-pipelines
+  (testing "one clause + final processing-fn pipeline"
+    (is (= [5 4 3 2 1]
+           (cond-pipeline [1 2 3 4 5]
+                          empty?   [:a :b]
+                          reverse))))
+
+  (testing "two clause pipeline"
+    (is (= [3 4 5 6]
+           (cond-pipeline [1 2 3 4 5]
+                          is-fooable?  do-foo
+                          seq          rest
+                          ))))
+
+  (testing "two clause pipeline skipping first clause"
+    (is (= [2 4]
+           (cond-pipeline [1 2 3 4 5]
+                          empty?   (partial conj :a)
+                          vector?  (partial filter even?)))))
+
+  (testing "two clause pipeline skipping both clauses"
+    (is (= [1 2 3 4 5]
+           (cond-pipeline [1 2 3 4 5]
+                          empty?   (partial conj :a)
+                          list?  (partial filter even?)))))
+  )
+
 
 (deftest test-all-features-pipeline
   (testing "the initial five-part initial pipeline"
@@ -79,7 +144,7 @@
                           is-fooable?  do-foo
                           
                           ;; if list doesn't satisfy is-barable, do nothing
-                          is-barable?  do-bar
+                          is-barable?  #(do-bar input)
 
                           ;; triples every element in list [2 3 4 5 6]
                           is-addable?  (partial map (partial * 3))
