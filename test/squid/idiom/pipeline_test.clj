@@ -15,7 +15,63 @@
 
 (defn is-addable? [list] true)
 
-(deftest test-five-part-cond-pipeline
+(deftest simple-cond-pipelines
+  (testing "empty pipeline"
+    (is (= [1 2 3 4 5]
+           (cond-pipeline [1 2 3 4 5]))))
+
+  (testing "one element (final processing-fn) pipeline"
+    (is (= [5 4 3 2 1]
+           (cond-pipeline [1 2 3 4 5]
+                          reverse))))
+
+  (testing "one binary clause pipeline"
+    (is (= [2 3 4 5 6]
+           (cond-pipeline [1 2 3 4 5]
+                          is-fooable?  do-foo))))
+
+  (testing "one ternary clause pipeline"
+    (is (= [3 4 5 6]
+           (cond-pipeline [1 2 3 4 5]
+                          rest :>> do-foo))))
+  )
+
+(deftest binding-guarantees
+  (testing "single eval of input for binary clause"
+    (let [counter (atom 0)]
+      (cond-pipeline (swap! counter inc)
+                     identity identity)
+      (is (= 1 @counter))))
+
+  (testing "single eval of input for ternary clause"
+    (let [counter (atom 0)]
+      (cond-pipeline (swap! counter inc)
+                     identity :>> identity)
+      (is (= 1 @counter)))))
+  
+
+(deftest simple-cond-pipelines
+  (testing "empty pipeline"
+    (is (= [1 2 3 4 5]
+           (cond-pipeline [1 2 3 4 5]))))
+
+  (testing "one element (final processing-fn) pipeline"
+    (is (= [5 4 3 2 1]
+           (cond-pipeline [1 2 3 4 5]
+                          reverse))))
+
+  (testing "one binary clause pipeline"
+    (is (= [2 3 4 5 6]
+           (cond-pipeline [1 2 3 4 5]
+                          is-fooable?  do-foo))))
+
+  (testing "one ternary clause pipeline"
+    (is (= [3 4 5 6]
+           (cond-pipeline [1 2 3 4 5]
+                          rest :>> do-foo))))
+  )
+
+(deftest test-all-features-pipeline
   (testing "the initial five-part initial pipeline"
     (is (= [18 12]
            (cond-pipeline [1 2 3 4 5]
