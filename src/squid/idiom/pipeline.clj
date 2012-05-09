@@ -36,14 +36,17 @@ as the value of the cond-pipeline form."
                (let [[[a b c :as clause] more]
                      (split-at (if (= :>> (second args)) 3 2) args)
                      n (count clause)
+                     itsym 'it
                      eexpr (gensym "eexpr__")]
                  (cond
                   (= 0 n) expr
                   (= 1 n) `(~a ~expr)
-                  (= 2 n) (emit `(let [~eexpr ~expr] (if (~a ~eexpr) (~b ~eexpr) ~eexpr)) more)
-                  :else   (emit `(let [~eexpr ~expr] (if-let [p# (~a ~eexpr)]
-                                                       (~c p#)
-                                                       ~eexpr)) more)
+                  (= 2 n) (emit `(let [~eexpr ~expr ~itsym (~a ~eexpr)]
+                                   (if ~itsym (~b ~eexpr) ~eexpr)) more)
+                  :else   (emit `(let [~eexpr ~expr ~itsym (~a ~eexpr)]
+                                   (if ~itsym
+                                     (~c ~itsym)
+                                     ~eexpr)) more)
                   )))
         gres (gensym "res__")]
     `(let [~gexpr ~expr]

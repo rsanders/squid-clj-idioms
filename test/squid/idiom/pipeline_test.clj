@@ -31,7 +31,11 @@
                           ;; takes list [6 9 12 15 18], takes
                           ;; rest of it [9 12 15 18] as input to action,
                           ;; and returns [12 18]
-                          rest    :>>     #(filter even? %)
+
+                          rest      :>>   #(filter even? %)
+                          
+                          ;; equivalent to:
+                          ;; rest     (fn [_] (filter even? it))
 
                           ;; takes [12 18] and returns [18 12]
                           reverse)))))
