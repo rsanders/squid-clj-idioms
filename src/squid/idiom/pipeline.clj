@@ -112,6 +112,16 @@ as the value of the cond-pipeline form."
     `(let [~gexpr ~expr]
        ~(emit gexpr clauses))))
 
+(defmacro compose-cond-pipeline
+  "Like cond-pipeline, but omits the first 'input' argument and expands to a
+form which returns a function which implements the pipeline specified in the
+macro body.  This function can then be treated like any Clojure fn and be
+applied to an argument once or more at any later time."
+  [& clauses]
+  (let [exprsym 'expr]                  ;do this to avoid namespacing
+                                        ;of the symbol
+    (list 'fn '[expr]
+          `(cond-pipeline ~exprsym ~@clauses))))
 
 (defn cond-pipeline-fn
   "A non-macro form of the cond-pipeline macro which, instead of evaluating
