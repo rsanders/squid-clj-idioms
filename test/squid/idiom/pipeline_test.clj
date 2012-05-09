@@ -25,7 +25,7 @@
                           ;; if list doesn't satisfy is-barable, do nothing
                           is-barable?  do-bar
 
-                          ;; doubles every element in list [2 3 4 5 6]
+                          ;; triples every element in list [2 3 4 5 6]
                           is-addable?  (partial map (partial * 3))
 
                           ;; takes list [6 9 12 15 18], takes
