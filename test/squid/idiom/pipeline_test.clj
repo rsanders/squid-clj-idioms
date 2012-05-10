@@ -162,7 +162,64 @@
                           reverse)))))
 
 ;;;
-;;; functional equivalent
+;;; Testing the compose-cond-pipeline macro
+;;;
+
+(deftest compose-cond-pipeline-return
+  (testing "Returns a function"
+    (is (fn? (compose-cond-pipeline)))
+    (is (fn? (compose-cond-pipeline reverse)))
+    (is (fn? (compose-cond-pipeline seq reverse)))
+    (is (fn? (compose-cond-pipeline seq reverse next))))
+
+(deftest simple-compose-cond-pipelines
+  (testing "empty pipeline"
+    (is (= [1 2 3 4 5]
+           ((compose-cond-pipeline)  [1 2 3 4 5]))))
+
+  (testing "one element (final processing-fn) pipeline"
+    (is (= [5 4 3 2 1]
+           ((compose-cond-pipeline reverse)  [1 2 3 4 5]))))
+
+  (testing "one binary clause pipeline"
+    (is (= [2 3 4 5 6]
+           ((compose-cond-pipeline 
+             is-fooable?  do-foo) [1 2 3 4 5]))))
+
+  (testing "one ternary clause pipeline"
+    (is (= [3 4 5 6]
+           ((compose-cond-pipeline 
+             rest :>> do-foo) [1 2 3 4 5]))))
+  )
+
+
+(deftest test-all-features-compose-cond-pipeline
+  (testing "the initial five-part initial pipeline"
+    (is (= [18 12]
+           ((compose-cond-pipeline
+             ;; assuming is-fooable? returns true, maps do-foo across [1 2 3 4 5]
+             is-fooable?  do-foo
+
+             ;; if list doesn't satisfy is-barable, do nothing
+             is-barable?  #(do-bar input)
+
+             ;; triples every element in list [2 3 4 5 6]
+             is-addable?  (partial map (partial * 3))
+
+             ;; takes list [6 9 12 15 18], takes
+             ;; rest of it [9 12 15 18] as input to action,
+             ;; and returns [12 18]
+
+             rest      :>>   #(filter even? %)
+
+             ;; equivalent to:
+             ;; rest     (fn [_] (filter even? it))
+
+             ;; takes [12 18] and returns [18 12]
+             reverse)            [1 2 3 4 5])))))
+
+;;;
+;;; The purely functional (non-macro) equivalent, cond-pipeline-from-seq
 ;;;
 
 (deftest test-simple-pipeline-from-seq
