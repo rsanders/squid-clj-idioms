@@ -122,8 +122,7 @@ as the value of the cond-pipeline form."
                                      (squid.idiom.pipeline/pipeline-apply ~c ~itsym)
                                      ~eexpr)) more)
                   )))]
-    `(let [~gexpr ~expr]
-       ~(emit gexpr clauses))))
+    (emit expr clauses)))
 
 (defmacro compose-cond-pipeline
   "Like cond-pipeline, but omits the first 'input' argument and expands to a
