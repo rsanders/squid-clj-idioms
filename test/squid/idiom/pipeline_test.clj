@@ -170,7 +170,7 @@
     (is (fn? (compose-cond-pipeline)))
     (is (fn? (compose-cond-pipeline reverse)))
     (is (fn? (compose-cond-pipeline seq reverse)))
-    (is (fn? (compose-cond-pipeline seq reverse next))))
+    (is (fn? (compose-cond-pipeline seq reverse next)))))
 
 (deftest simple-compose-cond-pipelines
   (testing "empty pipeline"
